@@ -1,0 +1,34 @@
+version : '3'
+
+networks:
+  default:
+    driver: bridge
+
+services :
+
+  intuitiveweb-api :
+    build:
+      context: ./intuitiveweb-api
+      dockerfile: Dockerfile.dev
+    container_name: intuitiveweb-api
+    restart: always
+    volumes:
+      - ./intuitiveweb-api/:/usr/src/workspace/intuitiveweb-api
+    ports:
+      - 3002:3002
+    command: > 
+      sh -c "
+      python /usr/src/workspace/intuitiveweb-api/scripts/transform_json.py &&
+      python ./src/main.py
+      "
+
+  intuitiveweb-ui :
+    build:
+      context: ./intuitiveweb-ui
+      dockerfile: Dockerfile.dev
+    container_name: intuitiveweb-ui
+    restart: always
+    volumes:
+      - ./intuitiveweb-ui/:/usr/src/workspace/intuitiveweb-ui
+    ports:
+      - 5172:5172

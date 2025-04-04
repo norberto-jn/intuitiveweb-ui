@@ -1,0 +1,7 @@
+FROM node:18.19.1-alpine3.18
+
+WORKDIR /usr/src/workspace/intuitiveweb-ui
+
+CMD [ -d "node_modules" ] && npm run serve || npm i && npm run serve
+
+EXPOSE 5172
