@@ -273,11 +273,13 @@
 <script>
 import axios from 'axios';
 import { mask } from 'vue-the-mask';
+import { useToast } from 'vue-toastification';
 
 export default {
   directives: { mask },
   data() {
     return {
+      // Seus dados permanecem os mesmos
       providers: [],
       loading: false,
       currentPage: 1,
@@ -310,6 +312,11 @@ export default {
       }
     };
   },
+  setup() {
+    // Inicializa o toast
+    const toast = useToast();
+    return { toast };
+  },
   computed: {
     modalTitle() {
       if (this.isViewMode) return 'View Provider Details';
@@ -336,6 +343,7 @@ export default {
       } catch (error) {
         console.error('Error fetching providers:', error);
         this.providers = [];
+        this.toast.error('Failed to fetch providers');
       } finally {
         this.loading = false;
       }
@@ -383,18 +391,35 @@ export default {
       this.showModal = true;
     },
     confirmDelete(provider) {
-      this.providerToDelete = provider;
+      this.providerToDelete = { ...provider };
       this.showDeleteModal = true;
     },
     async deleteProvider() {
+      if (!this.providerToDelete || !this.providerToDelete.ans_registration_code) {
+        console.error('No provider selected for deletion');
+        this.toast.error('No provider selected for deletion');
+        return;
+      }
+
       try {
-        await axios.delete(`http://localhost:3002/health-insurance-providers/${this.providerToDelete.ans_registration_code}`);
+        const response = await axios.delete(
+          `http://localhost:3002/health-insurance-providers/${this.providerToDelete.ans_registration_code}`
+        );
+        
         this.showDeleteModal = false;
-        this.fetchProviders();
-        this.$toast.success('Provider deleted successfully');
+        await this.fetchProviders();
+        
+        const successMessage = response.data?.message || 'Provider deleted successfully';
+        this.toast.success(successMessage);
       } catch (error) {
         console.error('Error deleting provider:', error);
-        this.$toast.error('Failed to delete provider');
+        
+        const errorMessage = error.response?.data?.message || 
+                         error.message || 
+                         'Failed to delete provider';
+        this.toast.error(errorMessage);
+      } finally {
+        this.providerToDelete = null;
       }
     },
     async submitForm() {
@@ -404,19 +429,21 @@ export default {
             `http://localhost:3002/health-insurance-providers/${this.formData.ans_registration_code}`,
             this.formData
           );
-          this.$toast.success('Provider updated successfully');
+          this.toast.success('Provider updated successfully');
         } else {
           await axios.post(
             'http://localhost:3002/health-insurance-providers',
             this.formData
           );
-          this.$toast.success('Provider created successfully');
+          this.toast.success('Provider created successfully');
         }
         this.closeModal();
         this.fetchProviders();
       } catch (error) {
         console.error('Error saving provider:', error);
-        this.$toast.error(`Failed to ${this.isEditMode ? 'update' : 'create'} provider`);
+        const errorMessage = error.response?.data?.message || 
+                         `Failed to ${this.isEditMode ? 'update' : 'create'} provider`;
+        this.toast.error(errorMessage);
       }
     },
     resetForm() {
@@ -449,6 +476,54 @@ export default {
 };
 </script>
 
+
+<style scoped>
+/* Seu CSS permanece exatamente o mesmo */
+.health-insurance-providers-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #333;
+}
+
+/* ... (todo o resto do seu CSS permanece igual) ... */
+
+@media (max-width: 768px) {
+  .search-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 
+      "code name"
+      "cnpj modality"
+      "region actions";
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  .table-row:first-child {
+    display: none;
+  }
+  
+  .table-cell:nth-child(1) { grid-area: code; }
+  .table-cell:nth-child(2) { grid-area: name; }
+  .table-cell:nth-child(3) { grid-area: cnpj; }
+  .table-cell:nth-child(4) { grid-area: modality; }
+  .table-cell:nth-child(5) { grid-area: region; }
+  .table-cell:nth-child(6) { grid-area: actions; justify-self: end; }
+  
+  .modal-content {
+    width: 95%;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
 <style scoped>
 .health-insurance-providers-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
